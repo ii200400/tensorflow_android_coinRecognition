@@ -169,24 +169,6 @@ public abstract class ImageClassifier {
     }
   }
 
-  public void useGpu() {
-    if (gpuDelegate == null && GpuDelegateHelper.isGpuDelegateAvailable()) {
-      gpuDelegate = GpuDelegateHelper.createGpuDelegate();
-      tfliteOptions.addDelegate(gpuDelegate);
-      recreateInterpreter();
-    }
-  }
-
-  public void useCPU() {
-    tfliteOptions.setUseNNAPI(false);
-    recreateInterpreter();
-  }
-
-  public void useNNAPI() {
-    tfliteOptions.setUseNNAPI(true);
-    recreateInterpreter();
-  }
-
   public void setNumThreads(int numThreads) {
     tfliteOptions.setNumThreads(numThreads);
     recreateInterpreter();

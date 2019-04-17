@@ -13,7 +13,7 @@ public class ImageClassifierCoinModel extends ImageClassifier {
     private float[][] labelProbArray = null;
 
     /**
-     * Initializes an {@code ImageClassifierFloatMobileNet}.
+     * Initializes an {@code ImageClassifierCoinModel}.
      *
      * @param activity
      */

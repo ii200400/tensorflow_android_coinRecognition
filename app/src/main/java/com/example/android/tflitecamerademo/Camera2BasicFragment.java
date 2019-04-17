@@ -55,10 +55,6 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
-import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.support.v13.app.FragmentCompat;
@@ -88,10 +84,7 @@ public class Camera2BasicFragment extends Fragment
   private boolean runClassifier = false;
   private boolean checkedPermissions = false;
   private TextView textView;
-  private NumberPicker np;
   private ImageClassifier classifier;
-  private ListView deviceView;
-  private ListView modelView;
 
 
   /** Max preview width that is guaranteed by Camera2 API */
@@ -127,14 +120,8 @@ public class Camera2BasicFragment extends Fragment
       };
 
   // Model parameter constants.
-  private String gpu;
-  private String cpu;
-  private String nnApi;
   private String coinmodel;
-  private String mobilenetV1Quant;
-  private String mobilenetV1Float;
-
-
+  private int numThreads = 5;
 
   /** ID of the current {@link CameraDevice}. */
   private String cameraId;
@@ -181,16 +168,6 @@ public class Camera2BasicFragment extends Fragment
           }
         }
       };
-
-  private ArrayList<String> deviceStrings = new ArrayList<String>();
-  private ArrayList<String> modelStrings = new ArrayList<String>();
-
-  /** Current indices of device and model. */
-  int currentDevice = -1;
-
-  int currentModel = -1;
-
-  int currentNumThreads = -1;
 
   /** An additional thread for running tasks that shouldn't block the UI. */
   private HandlerThread backgroundThread;
@@ -320,134 +297,31 @@ public class Camera2BasicFragment extends Fragment
   @Override
   public View onCreateView(
       LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-    return inflater.inflate(R.layout.fragment_camera2_basic, container, false);
+    return inflater.inflate(R.layout.fragment_camera2_basic_custom, container, false);
   }
 
   private void updateActiveModel() {
-    // Get UI information before delegating to background
-    final int modelIndex = modelView.getCheckedItemPosition();
-    final int deviceIndex = deviceView.getCheckedItemPosition();
-    final int numThreads = np.getValue();
+    final int numThreads = 5;
 
-    backgroundHandler.post(() -> {
-      if (modelIndex == currentModel && deviceIndex == currentDevice
-              && numThreads == currentNumThreads) {
-        return;
-      }
-      currentModel = modelIndex;
-      currentDevice = deviceIndex;
-      currentNumThreads = numThreads;
+    try {
+      classifier = new ImageClassifierCoinModel(getActivity());
+    }catch (IOException e) {
+      Log.d(TAG, "Failed to load", e);
+      classifier = null;
+    }
 
-      // Disable classifier while updating
-      if (classifier != null) {
-        classifier.close();
-        classifier = null;
-      }
-
-      // Lookup names of parameters.
-      String model = modelStrings.get(modelIndex);
-      String device = deviceStrings.get(deviceIndex);
-
-      Log.i(TAG, "Changing model to " + model + " device " + device);
-
-      // Try to load model.
-      try {
-        if (model.equals(coinmodel)){
-          classifier = new ImageClassifierCoinModel(getActivity());
-        } else if (model.equals(mobilenetV1Quant)) {
-          classifier = new ImageClassifierQuantizedMobileNet(getActivity());
-        } else if (model.equals(mobilenetV1Float)) {
-          classifier = new ImageClassifierFloatMobileNet(getActivity());
-        } else {
-          showToast("Failed to load model");
-        }
-      } catch (IOException e) {
-        Log.d(TAG, "Failed to load", e);
-        classifier = null;
-      }
-
-      // Customize the interpreter to the type of device we want to use.
-      if (classifier == null) {
-        return;
-      }
-      classifier.setNumThreads(numThreads);
-      if (device.equals(cpu)) {
-      } else if (device.equals(gpu)) {
-        if (!GpuDelegateHelper.isGpuDelegateAvailable()) {
-          showToast("gpu not in this build.");
-          classifier = null;
-        } else if (model.equals(mobilenetV1Quant)) {
-          showToast("gpu requires float model.");
-          classifier = null;
-        } else {
-          classifier.useGpu();
-        }
-      } else if (device.equals(nnApi)) {
-        classifier.useNNAPI();
-      }
-    });
+    if (classifier == null) {
+      return;
+    }
+    classifier.setNumThreads(numThreads);
   }
 
   /** Connect the buttons to their event handler. */
   @Override
   public void onViewCreated(final View view, Bundle savedInstanceState) {
-    gpu = getString(R.string.gpu);
-    cpu = getString(R.string.cpu);
-    nnApi = getString(R.string.nnapi);
-    coinmodel = getString(R.string.coinModel);
-    mobilenetV1Quant = getString(R.string.mobilenetV1Quant);
-    mobilenetV1Float = getString(R.string.mobilenetV1Float);
-
     // Get references to widgets.
     textureView = (AutoFitTextureView) view.findViewById(R.id.texture);
     textView = (TextView) view.findViewById(R.id.text);
-    deviceView = (ListView) view.findViewById(R.id.device);
-    modelView = (ListView) view.findViewById(R.id.model);
-
-    // Build list of models
-    modelStrings.add(coinmodel);
-    modelStrings.add(mobilenetV1Quant);
-    modelStrings.add(mobilenetV1Float);
-
-    // Build list of devices
-    int defaultModelIndex = 0;
-    deviceStrings.add(cpu);
-    if (GpuDelegateHelper.isGpuDelegateAvailable()) {
-      deviceStrings.add(gpu);
-    }
-    deviceStrings.add(nnApi);
-
-    deviceView.setAdapter(
-        new ArrayAdapter<String>(
-            getContext(), R.layout.listview_row, R.id.listview_row_text, deviceStrings));
-    deviceView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-    deviceView.setOnItemClickListener(
-//            람다식으로 대체
-//        new AdapterView.OnItemClickListener() {
-//          @Override
-//          public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-//            updateActiveModel();
-//          }
-//        });
-            (parent, view1, position, id) -> updateActiveModel());
-    deviceView.setItemChecked(0, true);
-
-    modelView.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-    ArrayAdapter<String> modelAdapter =
-        new ArrayAdapter<>(
-            getContext(), R.layout.listview_row, R.id.listview_row_text, modelStrings);
-    modelView.setAdapter(modelAdapter);
-    modelView.setItemChecked(defaultModelIndex, true);
-    modelView.setOnItemClickListener(
-//            위와같이 람다식으로 대체
-            (parent, view12, position, id) -> updateActiveModel());
-
-    np = (NumberPicker) view.findViewById(R.id.np);
-    np.setMinValue(1);
-    np.setMaxValue(10);
-    np.setWrapSelectorWheel(true);
-    np.setOnValueChangedListener(
-            (picker, oldVal, newVal) -> updateActiveModel());
 
     // Start initial model.
   }
