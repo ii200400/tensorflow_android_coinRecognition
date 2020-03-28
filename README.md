@@ -11,10 +11,14 @@
 + 개발 기간 : 약 2개월 (2019-02~2019-03)
 + 사용 언어: Python, Java
 
+## 개발 환경
+
++ Google Colaboratory (구글 계정 전용의 가상 머신)
++ Android Studio 3.0 (안드로이드 스튜디오)
+
 ## 사용 기술
 
-+ 개발 환경: Google Colab, Android Studio 3.0(안드로이드 스튜디오)
-+ Tensorflow
++ Tensorflow (2.0.1 version)
 
 ## 나의 작업(예정)
 
@@ -31,11 +35,12 @@
 <img src="./image/example3.jpg" width="40%" height="40%"> <img src="./image/example4.jpg" width="40%" height="40%">
 <img src="./image/example5.jpg" width="40%" height="40%">
 
+---
+
 > 아래는 TensorFlow로 간단한 물체인식 안드로이드 애플리케이션을 만드는 방법이 쓰여있다.\
 내가 봐야하므로 일단 지우지 않고 남기겠다.
 
-*****
-
+---
 
 # TF Lite Android Image Classifier App Example
 
